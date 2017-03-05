@@ -1,9 +1,9 @@
-import cPickle
+import pickle
 import socket
 import struct
 
-marshall = cPickle.dumps
-unmarshall = cPickle.loads
+marshall = pickle.dumps
+unmarshall = pickle.loads
 
 
 def send(channel, *args):
