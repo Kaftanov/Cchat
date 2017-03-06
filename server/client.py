@@ -2,6 +2,9 @@ import sys
 import select
 import socket
 from communication import send, receive
+import userform
+import getpass
+import json
 
 BUFSIZ = 1024
 
@@ -9,8 +12,9 @@ BUFSIZ = 1024
 class ChatClient(object):
     """ A simple command line chat client using select """
 
-    def __init__(self, name, host='localhost', port=3490):
-        self.name = name
+    def __init__(self, userform, host='localhost', port=3490):
+        self.name = userform.__dict__['name']
+        self.userform_string = json.dumps(userform.__dict__)
         # Quit flag
         self.flag = False
         self.port = port
@@ -24,7 +28,8 @@ class ChatClient(object):
             self.sock.connect((self.host, self.port))
             print('Connected to chat server')
             # Send my name...
-            send(self.sock, 'NAME: ' + self.name)
+
+            send(self.sock, self.userform_string)
             data = receive(self.sock)
             # Contains client address, set it
             addr = data.split('CLIENT: ')[1]
@@ -38,6 +43,8 @@ class ChatClient(object):
 
         while not self.flag:
             try:
+                # !! if you notice that the form is always written
+                # It's PROBLEM
                 sys.stdout.write(self.prompt)
                 sys.stdout.flush()
 
@@ -66,7 +73,14 @@ class ChatClient(object):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         sys.exit('Usage: %s name_id host portno' % sys.argv[0])
-    client = ChatClient(sys.argv[1], sys.argv[2], int(sys.argv[3]))
+    # login in chatroom
+    print('...Login...')
+    name = input('Enter your name: ')
+    long_name = input('Enter yout full name: ')
+    hostname = getpass.getuser()
+    form = userform.UserForm(name=name, long_name=long_name, hostname=hostname)
+
+    client = ChatClient(form, sys.argv[1], int(sys.argv[2]))
     client.cmdloop()

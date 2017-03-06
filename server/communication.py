@@ -20,7 +20,7 @@ def receive(channel):
     size = channel.recv(size)
     try:
         size = socket.ntohl(struct.unpack("L", size)[0])
-    except struct.error as error:
+    except struct.error:
         return ''
 
     buf = ""

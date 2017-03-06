@@ -3,6 +3,7 @@ import socket
 import sys
 import signal
 from communication import send, receive
+import json
 
 BUFSIZ = 1024
 
@@ -61,9 +62,9 @@ class ChatServer(object):
             try:
                 inputready, outputready, exceptready = select.select(
                                                       inputs, self.outputs, [])
-            except select.error as error:
+            except select.error:
                 break
-            except socket.error as error:
+            except socket.error:
                 break
 
             for s in inputready:
@@ -72,12 +73,16 @@ class ChatServer(object):
                     # handle the server socket
                     client, address = self.server.accept()
                     print('chatserver: got connection %d from %s' % (
-                                                      client.fileno(), address))
+                                                     client.fileno(), address))
                     # Read the login name
-                    cname = receive(client).split('NAME: ')[1]
+                    # json.loads(...) is userform dict
+                    cname = json.loads(receive(client))['name']
+
+                    # !! Add check is user is already created !!
 
                     # Compute client name and send back
                     self.clients += 1
+                    # i think this desing is now normal
                     send(client, 'CLIENT: ' + str(address[0]))
                     inputs.append(client)
 
@@ -91,6 +96,7 @@ class ChatServer(object):
 
                     self.outputs.append(client)
 
+                # i don't know what is it :)
                 elif s == sys.stdin:
                     # handle standard input
                     junk = sys.stdin.readline()
@@ -109,9 +115,9 @@ class ChatServer(object):
                                     # o.send(msg)
                                     send(o, msg)
                         else:
-                            print('chatserver: %s hung up') % str(s.fileno())
-                            print('chatserver: %s left room') % (
-                                   self.getname(client))
+                            print('chatserver: {} hung up'.format(s.fileno()))
+                            print('chatserver: {} left room'.format(
+                                  self.getname(client)))
                             self.clients -= 1
                             s.close()
                             inputs.remove(s)
@@ -123,7 +129,7 @@ class ChatServer(object):
                                 # o.send(msg)
                                 send(o, msg)
 
-                    except socket.error as error:
+                    except socket.error:
                         # Remove
                         inputs.remove(s)
                         self.outputs.remove(s)
