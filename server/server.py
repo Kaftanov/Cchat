@@ -1,43 +1,64 @@
-import select
+#!/usr/bin/env python3
+"""
+    #############################
+        Server applycation
+        version python: python3
+        based on socket
+    #############################
+    # nothing to add
+"""
 import socket
 import sys
+import select
 import signal
-from communication import send, receive
 import json
 
-BUFSIZ = 1024
+from communication import send, receive
 
 
-class ChatServer(object):
+class Server:
     """
-        Simple chat server using select
-    """
+        object that are contained in the
+            clientmap -- dict -- {'client' : (client_adress, client_name)}
+            outputs   -- list -- [all client sockets]
+            backlog   -- int  -- max listening ports
+            commands  -- list -- all spec commands
 
-    def __init__(self, port=3490, backlog=5):
-        self.clients = 0
-        # Client map
+        functions Server contain
+            __init__
+                initialize socket
+            sighandler
+                Shutting down server and closing all sockets
+            getname
+                get name,host from clientmap via inpust client
+            serve
+                main loop server
+    """
+    def __init__(self, backlog=5):
+        HOST = 'localhost'
+        PORT = 3490
         self.clientmap = {}
-        # Output socket list
         self.outputs = []
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind(('', port))
-        print('Listening to port', port, '...')
+        self.server.bind((HOST, PORT))
         self.server.listen(backlog)
-        # Trap keyboard interrupts
+        msg = "Running server on {HOST} and listening {PORT}".format(
+                HOST=HOST, PORT=PORT)
+        print(msg)
+        self.commands = []
         signal.signal(signal.SIGINT, self.sighandler)
 
     def sighandler(self, signum, frame):
         """
-            Shutdown the server if typing Ctrl+C
+            Shutdown the server if typing Ctrl + C
         """
-        # Close the server
-        print('Shutting down server...')
-        # Close existing client sockets
-        for sock in self.outputs:
-            sock.close()
-        # Closing the server port
+        # close all clients socket
+        for item in self.outputs:
+            item.close()
+        # close main socket
         self.server.close()
+        sys.exit('Shutting down server...')
 
     def getname(self, client):
         """
@@ -50,91 +71,76 @@ class ChatServer(object):
 
     def serve(self):
         """
-
+            main loop server
         """
         inputs = [self.server, sys.stdin]
         self.outputs = []
-
-        running = 1
+        running = True
 
         while running:
-
             try:
                 inputready, outputready, exceptready = select.select(
                                                       inputs, self.outputs, [])
-            except select.error:
+            except select.error as error:
+                print(error)
                 break
-            except socket.error:
+            except socket.error as error:
+                print(error)
                 break
-
-            for s in inputready:
-
-                if s == self.server:
-                    # handle the server socket
+            for sock in inputready:
+                if sock == self.server:
                     client, address = self.server.accept()
-                    print('chatserver: got connection %d from %s' % (
-                                                     client.fileno(), address))
-                    # Read the login name
-                    # json.loads(...) is userform dict
-                    cname = json.loads(receive(client))['name']
-
-                    # !! Add check is user is already created !!
-
-                    # Compute client name and send back
-                    self.clients += 1
-                    # i think this desing is now normal
-                    send(client, 'CLIENT: ' + str(address[0]))
+                    tmp_msg = "Cchat: got connection from {}".format(address)
+                    print(tmp_msg)
+                    # here server must get json or any variable
+                    user_form = json.loads(receive(client))
+                    client_name = user_form['name']
+                    print(client_name)
+                    # END_BLOCK
+                    # CLIENT we can rename identification string for client
+                    templete_send_to_client_msg = 'CLIENT: ' + str(address[0])
+                    send(client, templete_send_to_client_msg)
                     inputs.append(client)
 
-                    self.clientmap[client] = (address, cname)
-                    # Send joining information to other clients
-                    msg = '\n(Connected: New client (%d) from %s)' % (
-                                            self.clients, self.getname(client))
-                    for o in self.outputs:
-                        # o.send(msg)
-                        send(o, msg)
-
+                    self.clientmap[client] = (address, client_name)
+                    tmp_connect_msg = """\n(Connected: New client from
+                    """.format(self.getname(client))
+                    # send message for all users
+                    for item in self.outputs:
+                        send(item, tmp_connect_msg)
+                    # add new client in outputs set
                     self.outputs.append(client)
-
-                # i don't know what is it :)
-                elif s == sys.stdin:
-                    # handle standard input
-                    junk = sys.stdin.readline()
-                    running = 0
                 else:
-                    # handle all other sockets
                     try:
-                        # data = s.recv(BUFSIZ)
-                        data = receive(s)
+                        data = receive(sock)
                         if data:
-                            # Send as new client's message...
-                            msg = '\n#[' + self.getname(s) + ']>> ' + data
-                            # Send data to all except ourselves
-                            for o in self.outputs:
-                                if o != s:
-                                    # o.send(msg)
-                                    send(o, msg)
+                            if data in self.commands:
+                                print("tmp: {}".format(data))
+                            else:
+                                message = "\nUSER[{}]>> {}".format(
+                                            self.getname(sock), data)
+
+                                for item in self.outputs:
+                                    if item is not sock:
+                                        send(item, message)
                         else:
-                            print('chatserver: {} hung up'.format(s.fileno()))
-                            print('chatserver: {} left room'.format(
-                                  self.getname(client)))
-                            self.clients -= 1
-                            s.close()
-                            inputs.remove(s)
-                            self.outputs.remove(s)
+                            tmp_left_msg = "Cchat: {} left".format(
+                                            {self.getname(client)})
+                            print(tmp_left_msg)
+                            sock.close()
+                            inputs.remove(sock)
+                            self.outputs.remove(sock)
+                            msg = "\n(Hung up: Client from {})".format(
+                                    {self.getname(sock)})
+                            for item in self.outputs:
+                                send(item, msg)
 
-                            # Send client leaving information to others
-                            msg = '\n(Hung up: Client from %s)' % self.getname(s)
-                            for o in self.outputs:
-                                # o.send(msg)
-                                send(o, msg)
-
-                    except socket.error:
-                        # Remove
-                        inputs.remove(s)
-                        self.outputs.remove(s)
+                    except socket.error as error:
+                        print(error)
+                        inputs.remove(sock)
+                        self.outputs.remove(sock)
         self.server.close()
 
 
 if __name__ == "__main__":
-    ChatServer().serve()
+    Server().serve()

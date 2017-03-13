@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
     Module for creating user_form_registration
         1. Personality
@@ -9,12 +10,14 @@ class UserForm:
     """
         Class: user_form_registration
     """
-    # default self params:
     def __init__(self, **kwargs):
         """
             Example input string:
                 {'name': 'Ilya', 'long_name': 'Kaftanov Ilya Andreevich',
                  'hostname': 'getpass.getuser()'}
+
+            tuple_kwargs -- tuple -- set of all args which you needed
+
         """
         tuple_kwargs = ('name', 'long_name', 'hostname')
         # parce kwargs
