@@ -14,6 +14,7 @@ import signal
 import json
 
 from communication import send, receive
+from large_message import info as get_information
 
 
 class Server:
@@ -23,6 +24,7 @@ class Server:
             outputs   -- list -- [all client sockets]
             backlog   -- int  -- max listening ports
             commands  -- list -- all spec commands
+                contain: ['/online', /info, ]
 
         functions Server contain
             __init__
@@ -33,6 +35,8 @@ class Server:
                 get name,host from clientmap via inpust client
             serve
                 main loop server
+            exec_cmds
+                execute commands from 'commands' for user
     """
     def __init__(self, backlog=5):
         HOST = 'localhost'
@@ -46,7 +50,8 @@ class Server:
         msg = "Running server on {HOST} and listening {PORT}".format(
                 HOST=HOST, PORT=PORT)
         print(msg)
-        self.commands = []
+        self.commands = ['/online',
+                         '/info']
         signal.signal(signal.SIGINT, self.sighandler)
 
     def sighandler(self, signum, frame):
@@ -68,6 +73,17 @@ class Server:
         info = self.clientmap[client]
         host, name = info[0][0], info[1]
         return '@'.join((name, host))
+
+    def exec_cmds(self, cmd):
+        if cmd == '/online':
+            msg = ''
+            for i, item in enumerate(self.outputs):
+                msg += '\n#%i Client name: %s' % (i, self.clientmap[item][1])
+            return msg
+        elif cmd == '/info':
+            return get_information()
+        else:
+            return 'Unexpected Error'
 
     def serve(self):
         """
@@ -95,7 +111,6 @@ class Server:
                     # here server must get json or any variable
                     user_form = json.loads(receive(client))
                     client_name = user_form['name']
-                    print(client_name)
                     # END_BLOCK
                     # CLIENT we can rename identification string for client
                     templete_send_to_client_msg = 'CLIENT: ' + str(address[0])
@@ -115,7 +130,7 @@ class Server:
                         data = receive(sock)
                         if data:
                             if data in self.commands:
-                                print("tmp: {}".format(data))
+                                send(sock, self.exec_cmds(data))
                             else:
                                 message = "\nUSER[{}]>> {}".format(
                                             self.getname(sock), data)
