@@ -41,6 +41,7 @@ class Server:
     def __init__(self, backlog=5):
         HOST = 'localhost'
         PORT = 3490
+        self.SERVERPSWD = 'qwerty'
         self.clientmap = {}
         self.outputs = []
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -110,13 +111,19 @@ class Server:
                     print(tmp_msg)
                     # here server must get json or any variable
                     data = receive(client)
+
                     if data != 'qwerty':
                         send(client, 'Error')
                         continue
-                    inputs.append(client)
+                    elif data == 'qwerty':
+                        send(client, 'Confirmed')
+                    else:
+                        send(client, 'Unexpected Error')
 
-                    client_name = '111'
-                    client_long_name = '222'
+                    data = receive(client)
+                    client_name = data['name']
+                    client_long_name = data['long_name']
+                    inputs.append(client)
                     self.clientmap[client] = (address, client_name,
                                               client_long_name)
                     tmp_connect_msg = """\n(Connected: New client from

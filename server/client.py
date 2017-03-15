@@ -13,7 +13,7 @@ import socket
 import userform
 import pickle
 
-from getpass import getpass
+from getpass import getpass, getuser
 from communication import send, receive
 
 
@@ -43,7 +43,6 @@ class Client:
             cmdloop
                 loop for wait writting message(send/receive)
     """
-
     def __init__(self, host='localhost', port=3490):
         """
             init client object
@@ -55,22 +54,25 @@ class Client:
         log_flag = True
         while log_flag:
             try:
+                pswd = getpass('Please enter the password:')
+                print('Connected to chat server')
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.sock.connect((HOST, PORT))
-                print('Connected to chat server')
-                send(self.sock, getpass('Please enter the password:'))
+                # check password
+                send(self.sock, pswd)
                 data = receive(self.sock)
                 if data == 'Error':
                     raise RegisterError(0)
                 elif data == 'Confirmed':
-                    # data = receive(self.sock)
-                    self.prompt = '[' + self.name + ']> '
+                    tmp = self.create_usrform()
+                    send(self.sock, tmp)
+                    self.prompt = '[' + tmp['name'] + ']> '
+                    log_flag = False
                 else:
                     raise RegisterError(1)
             except socket.error as error:
                 print('Cchat_Client: Could not connect to chat server')
                 print(error)
-                self.sock.close()
                 sys.exit(1)
             except RegisterError as msg:
                 print(msg)
@@ -80,6 +82,15 @@ class Client:
                 print(signal)
                 self.sock.close()
                 sys.exit(1)
+
+    def create_usrform(self):
+        print('...Login...')
+        name = input('Enter your name: ')
+        long_name = input('Enter your full name: ')
+        hostname = getuser()
+        form = userform.UserForm(name=name, long_name=long_name,
+                                 hostname=hostname)
+        return form.__dict__
 
     def cmdloop(self):
 
