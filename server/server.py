@@ -78,7 +78,7 @@ class Server:
             msg = ''
             for i, item in enumerate(self.outputs):
                 msg += '\n#%i Client name: %s::%s' % \
-                       (i, self.clientmap[item][1], self.clientmap[item][2])
+                      (i, self.clientmap[item][1], self.clientmap[item][2])
             return msg
         elif cmd == '/info':
             return get_information()
