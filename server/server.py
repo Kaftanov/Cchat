@@ -11,7 +11,6 @@ import socket
 import sys
 import select
 import signal
-import json
 
 from communication import send, receive
 from large_message import info as get_information
@@ -25,7 +24,6 @@ class Server:
             backlog   -- int  -- max listening ports
             commands  -- list -- all spec commands
                 contain: ['/online', /info, ]
-
         functions Server contain
             __init__
                 initialize socket
@@ -41,6 +39,7 @@ class Server:
     def __init__(self, backlog=5):
         HOST = 'localhost'
         PORT = 3490
+        self.SERVERPSWD = 'qwerty'
         self.clientmap = {}
         self.outputs = []
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -78,7 +77,7 @@ class Server:
         if cmd == '/online':
             msg = ''
             for i, item in enumerate(self.outputs):
-                msg += '\n#%i Client name: %s' % (i, self.clientmap[item][1])
+                msg += '\n#%i Client name: %s::%s' % (i, self.clientmap[item][1], self.clientmap[item][2])
             return msg
         elif cmd == '/info':
             return get_information()
@@ -109,15 +108,22 @@ class Server:
                     tmp_msg = "Cchat: got connection from {}".format(address)
                     print(tmp_msg)
                     # here server must get json or any variable
-                    user_form = json.loads(receive(client))
-                    client_name = user_form['name']
-                    # END_BLOCK
-                    # CLIENT we can rename identification string for client
-                    templete_send_to_client_msg = 'CLIENT: ' + str(address[0])
-                    send(client, templete_send_to_client_msg)
-                    inputs.append(client)
+                    data = receive(client)
 
-                    self.clientmap[client] = (address, client_name)
+                    if data != 'qwerty':
+                        send(client, 'Error')
+                        continue
+                    elif data == 'qwerty':
+                        send(client, 'Confirmed')
+                    else:
+                        send(client, 'Unexpected Error')
+
+                    data = receive(client)
+                    client_name = data['name']
+                    client_long_name = data['long_name']
+                    inputs.append(client)
+                    self.clientmap[client] = (address, client_name,
+                                              client_long_name)
                     tmp_connect_msg = """\n(Connected: New client from
                     """.format(self.getname(client))
                     # send message for all users
