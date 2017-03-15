@@ -11,9 +11,25 @@ import sys
 import select
 import socket
 import userform
-import getpass
-import json
+import pickle
+
+from getpass import getpass
 from communication import send, receive
+
+
+class RegisterError(Exception):
+    """
+        My Exception
+    """
+    def __init__(self, type_exception):
+        Exception.__init__(self)
+        if type_exception == 0:
+            self.msg = "Cchat_Client: You password isn't correct, sry"
+        elif type_exception == 1:
+            self.msg = "Unexpected exception"
+
+    def __str__(self):
+        return self.msg
 
 
 class Client:
@@ -28,36 +44,42 @@ class Client:
                 loop for wait writting message(send/receive)
     """
 
-    def __init__(self, host='localhost', port=3490,
-                 usr_form=userform.UserForm()):
+    def __init__(self, host='localhost', port=3490):
         """
             init client object
         """
-        # User form it's all inf about auth user
-        user_object_dict = usr_form.__dict__
-        self.name = user_object_dict['name']
-        self.user_object_json = json.dumps(user_object_dict)
-        # Client object's
         PORT = port
         HOST = host
         # Initial prompt
-        self.prompt = '['+'@'.join((name,
-                                    socket.gethostname().split('.')[0]))+']> '
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((HOST, PORT))
-            print('Connected to chat server')
-            # Send information about user (user_object_json)
-            send(self.sock, self.user_object_json)
-            data = receive(self.sock)
-            # Contains client address, set it
-            # CLIENT split iter for identif user
-            addr = data.split('CLIENT: ')[1]
-            self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
-        except socket.error as error:
-            print('Cchat_Client: Could not connect to chat server')
-            print(error)
-            sys.exit(1)
+        self.prompt = '[unknown]> '
+        log_flag = True
+        while log_flag:
+            try:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.connect((HOST, PORT))
+                print('Connected to chat server')
+                send(self.sock, getpass('Please enter the password:'))
+                data = receive(self.sock)
+                if data == 'Error':
+                    raise RegisterError(0)
+                elif data == 'Confirmed':
+                    # data = receive(self.sock)
+                    self.prompt = '[' + self.name + ']> '
+                else:
+                    raise RegisterError(1)
+            except socket.error as error:
+                print('Cchat_Client: Could not connect to chat server')
+                print(error)
+                self.sock.close()
+                sys.exit(1)
+            except RegisterError as msg:
+                print(msg)
+                print("Try again")
+                self.sock.close()
+            except KeyboardInterrupt as signal:
+                print(signal)
+                self.sock.close()
+                sys.exit(1)
 
     def cmdloop(self):
 
@@ -95,11 +117,5 @@ class Client:
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit('Usage: %s name_id host portno' % sys.argv[0])
-    # login in chatroom
-    print('...Login...')
-    name = input('Enter your name: ')
-    long_name = input('Enter your full name: ')
-    hostname = getpass.getuser()
-    form = userform.UserForm(name=name, long_name=long_name, hostname=hostname)
 
-    Client(sys.argv[1], int(sys.argv[2]), form).cmdloop()
+    Client(sys.argv[1], int(sys.argv[2])).cmdloop()

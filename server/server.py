@@ -11,7 +11,7 @@ import socket
 import sys
 import select
 import signal
-import json
+import pickle
 
 from communication import send, receive
 from large_message import info as get_information
@@ -78,7 +78,7 @@ class Server:
         if cmd == '/online':
             msg = ''
             for i, item in enumerate(self.outputs):
-                msg += '\n#%i Client name: %s' % (i, self.clientmap[item][1])
+                msg += '\n#%i Client name: %s::%s' % (i, self.clientmap[item][1], self.clientmap[item][2])
             return msg
         elif cmd == '/info':
             return get_information()
@@ -109,15 +109,16 @@ class Server:
                     tmp_msg = "Cchat: got connection from {}".format(address)
                     print(tmp_msg)
                     # here server must get json or any variable
-                    user_form = json.loads(receive(client))
-                    client_name = user_form['name']
-                    # END_BLOCK
-                    # CLIENT we can rename identification string for client
-                    templete_send_to_client_msg = 'CLIENT: ' + str(address[0])
-                    send(client, templete_send_to_client_msg)
+                    data = receive(client)
+                    if data != 'qwerty':
+                        send(client, 'Error')
+                        continue
                     inputs.append(client)
 
-                    self.clientmap[client] = (address, client_name)
+                    client_name = '111'
+                    client_long_name = '222'
+                    self.clientmap[client] = (address, client_name,
+                                              client_long_name)
                     tmp_connect_msg = """\n(Connected: New client from
                     """.format(self.getname(client))
                     # send message for all users
