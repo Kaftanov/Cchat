@@ -11,7 +11,6 @@ import sys
 import select
 import socket
 import userform
-import pickle
 
 from getpass import getpass, getuser
 from communication import send, receive
@@ -19,7 +18,7 @@ from communication import send, receive
 
 class RegisterError(Exception):
     """
-        My Exception
+        My Exception for user's password
     """
     def __init__(self, type_exception):
         Exception.__init__(self)
@@ -63,9 +62,8 @@ class Client:
                 if data == 'Error':
                     raise RegisterError(0)
                 elif data == 'Confirmed':
-                    tmp = self.create_usrform()
-                    send(self.sock, tmp)
-                    self.prompt = '[' + tmp['name'] + ']> '
+                    send(self.sock, self.create_usrform())
+                    self.prompt = '[You]> '
                     log_flag = False
                 else:
                     raise RegisterError(1)
