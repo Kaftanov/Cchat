@@ -5,21 +5,18 @@
         version python: python3
         based on socket
     #############################
-    # nothing to add
 """
 import sys
 import select
 import socket
-import userform
 
-from getpass import getpass, getuser
+import userform
 from communication import send, receive
 
 
+
 class RegisterError(Exception):
-    """
-        My Exception for user's password
-    """
+    """ My exception for user's password """
     def __init__(self, type_exception):
         Exception.__init__(self)
         if type_exception == 0:
@@ -37,80 +34,80 @@ class Client:
             prompt -- string -- it's need for visual effect command line
         functions Server contain
             __init__
-                init socket, connect, getname form server
+                init socket, connect, get name form server
             cmdloop
-                loop for wait writting message(send/receive)
+                loop for wait witting message(send/receive)
     """
-    def __init__(self, host='localhost', port=3490):
-        """
-            init client object
-        """
-        PORT = port
-        HOST = host
+    def __init__(self, server_host=None, server_port=None):
+        """ init client object """
+        if server_host is None:
+            self.server_host = 'localhost'
+        else:
+            self.server_host = server_host
+        if server_port is None:
+            self.server_port = 3490
+        else:
+            self.server_port = server_port
         # Initial prompt
-        self.prompt = '[unknown]> '
-        log_flag = True
-        while log_flag:
+        self.user_name = self.validator_authenticate()
+        self.prompt = '[%s]' % self.user_name
+
+    def validator_authenticate(self):
+        """ Checking registration/login data"""
+        is_authenticate = False
+        while not is_authenticate:
             try:
-                pswd = getpass('Please enter the password:')
-                print('Connected to chat server')
+                data = userform.create_userform()
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.sock.connect((HOST, PORT))
-                # check password
-                send(self.sock, pswd)
-                data = receive(self.sock)
-                if data == 'Error':
+                self.sock.connect((self.server_host, self.server_port))
+                send(self.sock, data)
+                receive_data = receive(self.sock)
+                # checking is user available
+                if receive_data == 'Error':
                     raise RegisterError(0)
-                elif data == 'Confirmed':
-                    send(self.sock, self.create_usrform())
-                    self.prompt = '[You]> '
-                    log_flag = False
+                elif receive_data == 'Success':
+                    is_authenticate = True
+                    return data['login']
                 else:
                     raise RegisterError(1)
+
             except socket.error as error:
                 print('Cchat_Client: Could not connect to chat server')
                 print(error)
                 sys.exit(1)
+
             except RegisterError as msg:
                 print(msg)
                 print("Try again")
                 self.sock.close()
+
             except KeyboardInterrupt as signal:
                 print(signal)
-                self.sock.close()
+                if self.sock:
+                    self.sock.close()
                 sys.exit(1)
 
-    def create_usrform(self):
-        print('...Login...')
-        name = input('Enter your name: ')
-        long_name = input('Enter your full name: ')
-        hostname = getuser()
-        form = userform.UserForm(name=name, long_name=long_name,
-                                 hostname=hostname)
-        return form.__dict__
-
-    def cmdloop(self):
-
-        Q_flag = True
-        while Q_flag:
+    def run_chat_loop(self):
+        is_shutdown = True
+        while is_shutdown:
             try:
                 # !! if you notice that the form is always written
                 # It's PROBLEM
                 sys.stdout.write(self.prompt)
                 sys.stdout.flush()
-                # Wait for input from stdin & socket
-                inputready, outputready, exceptrdy = select.select([0, self.sock], [], [])
 
-                for i in inputready:
-                    if i == 0:
+                in_fds, out_fds, err_fds = select.select([0, self.sock], [], [])
+
+                for i in in_fds:
+                    if i is 0:
                         data = sys.stdin.readline().strip()
                         if data:
                             send(self.sock, data)
-                    elif i == self.sock:
+                    elif i is self.sock:
                         data = receive(self.sock)
                         if not data:
                             print('Shutting down.')
-                            Q_flag = False
+                            is_shutdown = False
                             break
                         else:
                             sys.stdout.write(data + '\n')
@@ -123,7 +120,6 @@ class Client:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit('Usage: %s name_id host portno' % sys.argv[0])
-
-    Client(sys.argv[1], int(sys.argv[2])).cmdloop()
+    #if len(sys.argv) < 2:
+        #sys.exit('Usage: %s name_id host portno' % sys.argv[0])
+    Client().run_chat_loop()
