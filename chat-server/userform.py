@@ -32,12 +32,16 @@ class UserForm:
 
 def create_userform():
     """ Creating initialization form for user"""
-    print('...Login...')
-    user_login = input('Login: ')
-    first_name = input('First name: ')
-    second_name = input('Second name: ')
-    password = getpass('Please enter the password:')
-    hostname = getuser()
-    return UserForm(first_name=first_name, second_name=second_name,
-                    password=password, hostname=hostname,
-                    login=user_login).__dict__
+    try:
+        print('...Login...')
+        user_login = input('Login: ')
+        first_name = input('First name: ')
+        second_name = input('Second name: ')
+        password = getpass('Please enter the password:')
+        hostname = getuser()
+    except KeyboardInterrupt as signal:
+        print(signal, "Login form isn't correct")
+    finally:
+        return UserForm(first_name=first_name, second_name=second_name,
+                        password=password, hostname=hostname,
+                        login=user_login).__dict__

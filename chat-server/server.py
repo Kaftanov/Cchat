@@ -24,6 +24,11 @@ class Server:
             command_list: special server command for user
                 contain: ['/online', /info, ]
             command_string: string which contain command
+            sid_value: session id value
+            user_list: list of output client address
+            user_dict: embedded dict which look like: {'sid_value': {
+             'login': .., 'first_name': .., 'second_name': .., 'password': ..,
+             'hostname':..},  ..}
         functions Server contain
             __init__
                 info: initialize socket
@@ -49,6 +54,7 @@ class Server:
         self.server_password = 'qwerty'
         self.user_dict = {}
         self.user_list = []
+        self.socket_sid_dict = {}
         # initialize server socket
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -72,7 +78,7 @@ class Server:
     def exec_commands(self, command_string):
         """ Executing commands special commands """
         if command_string == '/online':
-            return servermessage.client_list(self.user_list)
+            return servermessage.client_list(self.user_dict)
         elif command_string == '/info':
             return servermessage.info()
         else:
@@ -90,6 +96,10 @@ class Server:
         for sock in self.user_list:
             send(sock, message)
 
+    def get_sid(self, sock):
+        """ Getting sessionId_value """
+        return self.socket_sid_dict[sock]
+
     def run_server_loop(self):
         input_socket_list = [self.server]
         is_running = True
@@ -103,6 +113,7 @@ class Server:
             except socket.error as error:
                 print(error)
                 break
+
             for sock in in_fds:
                 if sock is self.server:
                     user, user_address = self.server.accept()
@@ -111,11 +122,13 @@ class Server:
                     data = receive(user)
                     # validator function
                     if self.validation_user(data):
+                        sid_value = data['login'] + \
+                                          chr(len(self.socket_sid_dict))
                         send(user, "Success")
-                        data.update({'user_address': user_address[0]})
-                        self.user_dict.update(data)
-                        print(self.user_dict)
-                        message = "New User in room %s" % data['login']
+                        self.user_dict[sid_value] = data
+                        self.socket_sid_dict[user] = sid_value
+                        print(self.user_dict[self.get_sid(user)])
+                        message = 'Cchat@New User in room "%s"' % data['login']
                         # send message for all users
                         # broadcast function
                         self.broadcast_message(message)
@@ -132,19 +145,19 @@ class Server:
                             if data in self.commands_list:
                                 send(sock, self.exec_commands(data))
                             else:
-                                message = data
+                                message = self.user_dict[self.get_sid(sock)]['login'] + '@' + data
                                 for i in self.user_list:
                                     if i is not sock:
                                         send(i, message)
                         else:
                             # message user left
-                            message = 'User left'
-                            self.broadcast_message(message)
+                            message = 'Cchat@User left "%s"' % self.user_dict[self.get_sid(sock)]['login']
+                            print(message)
                             sock.close()
                             input_socket_list.remove(sock)
                             self.user_list.remove(sock)
                             # message user
-                            message = 'Hung up'
+                            message = 'Cchat@Hung up "%s"' % self.user_dict[self.get_sid(sock)]['login']
                             self.broadcast_message(message)
 
                     except socket.error as error:

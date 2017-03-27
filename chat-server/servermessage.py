@@ -21,7 +21,7 @@ def welcome_string(host='localhost', port=3490, backlog=5):
 
 def client_list(output_list):
     msg = ''
-    for i, user in enumerate(output_list):
+    for i, arg in enumerate(output_list):
         msg += '\n#%i Client name: %s' % \
-              (i, user)
+              (i, output_list[arg]['login'])
     return msg

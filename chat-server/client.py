@@ -110,7 +110,9 @@ class Client:
                             is_shutdown = False
                             break
                         else:
-                            sys.stdout.write(data + '\n')
+                            data_list = data.split('@')
+                            message = '<' + data_list[0] + '>' + data_list[1]
+                            sys.stdout.write('\n' + message + '\n')
                             sys.stdout.flush()
 
             except KeyboardInterrupt as error:
@@ -120,6 +122,4 @@ class Client:
 
 
 if __name__ == "__main__":
-    #if len(sys.argv) < 2:
-        #sys.exit('Usage: %s name_id host portno' % sys.argv[0])
     Client().run_chat_loop()
