@@ -9,14 +9,17 @@
 import sys
 import select
 import socket
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QThread
 
 import userform
 from communication import send, receive
-
+from cchatui import Ui_CchatWindow
 
 
 class RegisterError(Exception):
     """ My exception for user's password """
+
     def __init__(self, type_exception):
         Exception.__init__(self)
         if type_exception == 0:
@@ -26,6 +29,22 @@ class RegisterError(Exception):
 
     def __str__(self):
         return self.msg
+
+
+class WorkThread(QThread):
+    """
+        Class for working with pyqt thread
+        this class run 'run_chat_loop()' in class 'Client'
+    """
+
+    def __init__(self):
+        QThread.__init__(self)
+
+    def setWorker(self, Cl):
+        self.Cl = Cl
+
+    def run(self):
+        self.Cl.run_chat_loop()
 
 
 class Client:
@@ -38,6 +57,7 @@ class Client:
             cmdloop
                 loop for wait witting message(send/receive)
     """
+
     def __init__(self, server_host=None, server_port=None):
         """ init client object """
         if server_host is None:
@@ -51,6 +71,29 @@ class Client:
         # Initial prompt
         self.user_name = self.validator_authenticate()
         self.prompt = '[%s]' % self.user_name
+        application = QtWidgets.QApplication(sys.argv)
+        CchatWindow = QtWidgets.QMainWindow()
+        self.ui = Ui_CchatWindow()
+        self.ui.setupUi(CchatWindow)
+        self.ui.sendButton.clicked.connect(self.send_message)
+        self.ui.inputLine.returnPressed.connect(self.send_message)
+        CchatWindow.show()
+        self.workThread = WorkThread()
+        self.workThread.setWorker(self)
+        self.workThread.start()
+        sys.exit(application.exec_())
+
+    def print_into_box(self, data):
+        """ Printing data into text box"""
+        self.ui.textBox.append(data)
+
+    def send_message(self):
+        """ Send message into socket"""
+        # Warning error send message if unbound magic
+        data = self.ui.inputLine.text()
+        self.print_into_box(self.prompt + data)
+        self.ui.inputLine.clear()
+        send(self.sock, data)
 
     def validator_authenticate(self):
         """ Checking registration/login data"""
@@ -90,36 +133,19 @@ class Client:
     def run_chat_loop(self):
         is_shutdown = True
         while is_shutdown:
-            try:
-                # !! if you notice that the form is always written
-                # It's PROBLEM
-                sys.stdout.write(self.prompt)
-                sys.stdout.flush()
-
-                in_fds, out_fds, err_fds = select.select([0, self.sock], [], [])
-
-                for i in in_fds:
-                    if i is 0:
-                        data = sys.stdin.readline().strip()
-                        if data:
-                            send(self.sock, data)
-                    elif i is self.sock:
-                        data = receive(self.sock)
-                        if not data:
-                            print('Shutting down.')
-                            is_shutdown = False
-                            break
-                        else:
-                            data_list = data.split('@')
-                            message = '<' + data_list[0] + '>' + data_list[1]
-                            sys.stdout.write('\n' + message + '\n')
-                            sys.stdout.flush()
-
-            except KeyboardInterrupt as error:
-                print ('Interrupted.', error)
-                self.sock.close()
-                break
+            in_fds, out_fds, err_fds = select.select([self.sock], [], [])
+            for sock in in_fds:
+                if sock is self.sock:
+                    data = receive(self.sock)
+                    if not data:
+                        self.print_into_box('Server was shutdown')
+                        is_shutdown = False
+                        break
+                    else:
+                        data_list = data.split('@')
+                        message = '<' + data_list[0] + '>' + data_list[1]
+                        self.print_into_box(message)
 
 
 if __name__ == "__main__":
-    Client().run_chat_loop()
+    Client()

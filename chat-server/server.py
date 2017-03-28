@@ -76,7 +76,7 @@ class Server:
         sys.exit('Shutting down server...')
 
     def exec_commands(self, command_string):
-        """ Executing commands special commands """
+        """ Executing special server commands """
         if command_string == '/online':
             return servermessage.client_list(self.user_dict)
         elif command_string == '/info':
@@ -127,7 +127,6 @@ class Server:
                         send(user, "Success")
                         self.user_dict[sid_value] = data
                         self.socket_sid_dict[user] = sid_value
-                        print(self.user_dict[self.get_sid(user)])
                         message = 'Cchat@New User in room "%s"' % data['login']
                         # send message for all users
                         # broadcast function
