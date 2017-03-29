@@ -6,20 +6,20 @@
         based on socket
     #############################
 """
-import sys
 import select
 import socket
+import sys
+
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, QPoint
+from cchatui import Ui_CchatWindow
+from communication import send, receive
 
 import userform
-from communication import send, receive
-from cchatui import Ui_CchatWindow
 
 
 class RegisterError(Exception):
     """ My exception for user's password """
-
     def __init__(self, type_exception):
         Exception.__init__(self)
         if type_exception == 0:
@@ -36,7 +36,6 @@ class WorkThread(QThread):
         Class for working with pyqt thread
         this class run 'run_chat_loop()' in class 'Client'
     """
-
     def __init__(self):
         QThread.__init__(self)
 
@@ -71,13 +70,19 @@ class Client:
         # Initial prompt
         self.user_name = self.validator_authenticate()
         self.prompt = '[%s]' % self.user_name
+        self.init_window()
+
+    def init_window(self):
+        """ Initialize pyqt form"""
         application = QtWidgets.QApplication(sys.argv)
         CchatWindow = QtWidgets.QMainWindow()
+        CchatWindow.move(QPoint(15, 40))
         self.ui = Ui_CchatWindow()
         self.ui.setupUi(CchatWindow)
         self.ui.sendButton.clicked.connect(self.send_message)
         self.ui.inputLine.returnPressed.connect(self.send_message)
         CchatWindow.show()
+        # set thread
         self.workThread = WorkThread()
         self.workThread.setWorker(self)
         self.workThread.start()
@@ -101,19 +106,21 @@ class Client:
         while not is_authenticate:
             try:
                 data = userform.create_userform()
-                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.sock.connect((self.server_host, self.server_port))
-                send(self.sock, data)
-                receive_data = receive(self.sock)
-                # checking is user available
-                if receive_data == 'Error':
-                    raise RegisterError(0)
-                elif receive_data == 'Success':
-                    is_authenticate = True
-                    return data['login']
+                if data:
+                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.sock.connect((self.server_host, self.server_port))
+                    send(self.sock, data)
+                    receive_data = receive(self.sock)
+                    # checking is user available
+                    if receive_data == 'Error':
+                        raise RegisterError(0)
+                    elif receive_data == 'Success':
+                        is_authenticate = True
+                        return data['login']
+                    else:
+                        raise RegisterError(1)
                 else:
-                    raise RegisterError(1)
-
+                    sys.exit('KeyboardInterrupt from user_form')
             except socket.error as error:
                 print('Cchat_Client: Could not connect to chat server')
                 print(error)
@@ -143,7 +150,7 @@ class Client:
                         break
                     else:
                         data_list = data.split('@')
-                        message = '<' + data_list[0] + '>' + data_list[1]
+                        message = '<' + data_list[0] + '>' + data_list[1].strip('\n')
                         self.print_into_box(message)
 
 

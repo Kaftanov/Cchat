@@ -39,9 +39,10 @@ def create_userform():
         second_name = input('Second name: ')
         password = getpass('Please enter the password:')
         hostname = getuser()
-    except KeyboardInterrupt as signal:
-        print(signal, "Login form isn't correct")
-    finally:
         return UserForm(first_name=first_name, second_name=second_name,
                         password=password, hostname=hostname,
                         login=user_login).__dict__
+    except KeyboardInterrupt as signal:
+        print(signal, "Login form isn't correct")
+        return False
+

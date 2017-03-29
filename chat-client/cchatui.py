@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_CchatWindow(object):
     def setupUi(self, CchatWindow):
         CchatWindow.setObjectName("CchatWindow")

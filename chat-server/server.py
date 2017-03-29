@@ -6,13 +6,14 @@
         based on socket
     #############################
 """
-import socket
-import sys
 import select
 import signal
+import socket
+import sys
+
+from communication import send, receive
 
 import servermessage
-from communication import send, receive
 
 
 class Server:
@@ -150,13 +151,21 @@ class Server:
                                         send(i, message)
                         else:
                             # message user left
-                            message = 'Cchat@User left "%s"' % self.user_dict[self.get_sid(sock)]['login']
+                            try:
+                                remote_dict = self.user_dict.pop(self.get_sid(sock))
+                                remote_user = remote_dict['login']
+                            except KeyError as error:
+                                print(error)
+                                remote_user = 'UNKNOWN'
+                                pass
+
+                            message = 'User "%s" left' % remote_user
                             print(message)
                             sock.close()
                             input_socket_list.remove(sock)
                             self.user_list.remove(sock)
                             # message user
-                            message = 'Cchat@Hung up "%s"' % self.user_dict[self.get_sid(sock)]['login']
+                            message = 'Cchat@User "%s" left' % remote_user
                             self.broadcast_message(message)
 
                     except socket.error as error:
