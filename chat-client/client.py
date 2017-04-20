@@ -9,13 +9,14 @@
 import select
 import socket
 import sys
+import time
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QPoint
-from cchatui import Ui_CchatWindow
-from communication import send, receive
 
 import userform
+from cchatui import Ui_CchatWindow
+from communication import send, receive
 
 
 class RegisterError(Exception):
@@ -69,14 +70,13 @@ class Client:
             self.server_port = server_port
         # Initial prompt
         self.user_name = self.validator_authenticate()
-        self.prompt = '[%s]' % self.user_name
-        self.init_window()
+        self.prompt = '[%s $ ' % self.user_name
+        self.initUI()
 
-    def init_window(self):
+    def initUI(self):
         """ Initialize pyqt form"""
         application = QtWidgets.QApplication(sys.argv)
         CchatWindow = QtWidgets.QMainWindow()
-        CchatWindow.move(QPoint(15, 40))
         self.ui = Ui_CchatWindow()
         self.ui.setupUi(CchatWindow)
         self.ui.sendButton.clicked.connect(self.send_message)
@@ -91,12 +91,17 @@ class Client:
     def print_into_box(self, data):
         """ Printing data into text box"""
         self.ui.textBox.append(data)
+        pass
 
     def send_message(self):
         """ Send message into socket"""
         # Warning error send message if unbound magic
         data = self.ui.inputLine.text()
-        self.print_into_box(self.prompt + data)
+        send_time = time.localtime(time.time())[3:6]
+        time_string = '%s:%s:%s]' % (send_time[0],
+                                     send_time[1],
+                                     send_time[2])
+        self.print_into_box(self.prompt + time_string + data)
         self.ui.inputLine.clear()
         send(self.sock, data)
 
@@ -150,7 +155,7 @@ class Client:
                         break
                     else:
                         data_list = data.split('@')
-                        message = '<' + data_list[0] + '>' + data_list[1].strip('\n')
+                        message = '<' + data_list[0] + '>' + data_list[1]
                         self.print_into_box(message)
 
 

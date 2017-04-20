@@ -10,9 +10,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class Ui_CchatWindow(object):
+
     def setupUi(self, CchatWindow):
         CchatWindow.setObjectName("CchatWindow")
         CchatWindow.resize(640, 480)
+        CchatWindow.move(QtCore.QPoint(15, 40))
         self.centralwidget = QtWidgets.QWidget(CchatWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
