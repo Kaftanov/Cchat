@@ -2,6 +2,8 @@
 """
     Printing template large message
 """
+import datetime
+
 
 class Messages(object):
     """
@@ -13,12 +15,10 @@ class Messages(object):
         client_list() :
         
     """
-    server_name = 'Cchat'
-    promt = server_name + ':@'
 
     def __init__(self, **kwargs):
         if kwargs['host'] is None:
-            raise Exception('None value for "host" in "Meessages"')
+            raise Exception('None value for "host" in "Messages"')
         elif kwargs['port'] is None:
             raise Exception('None value for "port" in "Messages"')
         elif kwargs['backlog'] is None:
@@ -26,44 +26,24 @@ class Messages(object):
         else:
             self.server_info = kwargs
 
-    def info(self):
-        """ Some information about server """
-        message = self.promt
-        message += """
-I'm Cchat and I'm glad to see you here :)
-I have some commands special for you!
-    /online - you can check who is online now
-    /info
-"""
-        return message
-
     def welcome_string(self):
         """ Server welcome string for admin """
         return "Running server on {} and" \
-               "listening {} with listen {}".format(self.server_info['host'],self.server_info['port'],
+               "listening {} with listen {}".format(self.server_info['host'], self.server_info['port'],
                                                     self.server_info['backlog'])
 
     def print_new_user(self, login_string):
         """ New user on server """
-        return 'Cchat:@User "%s" connecting to the room' % login_string
+        message = 'User "%s" connected to the room' % login_string
+        head = 'Cchat~%s' % self.time()
+        return {'head': head, 'message': message}
 
-    def client_list(self, user_dict):
-        """ Print all online client """
-        msg = 'Cchat:@'
-        for i, key in enumerate(user_dict):
-            msg += '#%i Client name: %s' % \
-                   (i, user_dict[key]['login'])
-        return msg
+    def print_user_left(self, login_string):
+        """ User left from chat"""
+        message = 'User "%s" left from the room' % login_string
+        head = 'Cchat~%s' % self.time()
+        return {'head': head, 'message': message}
 
-
-
-
-def full_client_list(user_dict):
-    msg = 'Cchat:@'
-    for i, key in enumerate(user_dict):
-        msg += '#%i Login: "%s" \n First name: "%s"' \
-               '\n Second name: "%s"' % (i,
-                                         user_dict[key]['login'],
-                                         user_dict[key]['first_name'],
-                                         user_dict[key]['second_name'])
-    return msg
+    @staticmethod
+    def time():
+        return str(datetime.datetime.now().time())[:16]

@@ -20,7 +20,7 @@ class UserForm:
             tuple_kwargs -- tuple -- set of all args which you needed
 
         """
-        tuple_kwargs = ('first_name', 'second_name', 'password', 'hostname',
+        tuple_kwargs = ('password',
                         'login')
         # parse kwargs
         for key in tuple_kwargs:
@@ -33,16 +33,23 @@ class UserForm:
 def create_userform():
     """ Creating initialization form for user"""
     try:
-        print('...Login...')
-        user_login = input('Login: ')
-        first_name = input('First name: ')
-        second_name = input('Second name: ')
-        password = getpass('Please enter the password:')
-        hostname = getuser()
-        return UserForm(first_name=first_name, second_name=second_name,
-                        password=password, hostname=hostname,
-                        login=user_login).__dict__
+        type_ = input('Are you already whith us? [Y/n]')
+        if type_ in ('Yes', 'Y', 'yes', 'да', 'Да', 'y'):
+            type_ = 'log'
+        else:
+            type_ = 'reg'
+        if type_ == 'reg':
+            print('...Registration...')
+            login = input('Login: ')
+            password = getpass('Password: ')
+            if login and password:
+                return 1, UserForm(password=password, login=login).__dict__
+        elif type_ == 'log':
+            print('...Login...')
+            login = input('Login: ')
+            password = getpass('Password: ')
+            if login and password:
+                return 0, UserForm(password=password, login=login).__dict__
     except KeyboardInterrupt as signal:
         print(signal, "Login form isn't correct")
-        return False
 

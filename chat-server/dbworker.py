@@ -26,17 +26,10 @@ class DbHandler(object):
             )"""
         self.cursor.execute(sql)
 
-        sql = """CREATE TABLE IF NOT EXISTS link
-            (
-                uid TEXT NOT NULL PRIMARY KEY,
-                address TEXT NOT NULL
-            )"""
-        self.cursor.execute(sql)
-
     def add_user(self, userform):
         """ add user into TABLE """
         user = (userform['uid'], userform['login'],
-                userform['pswd'], userform['state'],
+                userform['password'], userform['state'],
                 userform['left'])
 
         sql = "INSERT INTO users (uid, login, password, state, left) VALUES (?,?,?,?,?)"
@@ -77,7 +70,7 @@ class DbHandler(object):
         try:
             self.cursor.execute(sql)
         except sqlite3.DatabaseError as error:
-            print(str(error) + 'in "get_user"')
+            print(str(error) + ' in "get_user"')
             return 'UID unknown'
         else:
             return self.cursor.fetchone()
@@ -87,7 +80,7 @@ class DbHandler(object):
         try:
             self.cursor.execute(sql)
         except sqlite3.DatabaseError as error:
-            print(str(error) + 'in "get_all_users"')
+            print(str(error) + ' in "get_all_users"')
         else:
             return self.get_list_rows(self.cursor.fetchall())
 
@@ -97,32 +90,35 @@ class DbHandler(object):
         try:
             self.cursor.execute(sql)
         except sqlite3.DatabaseError as error:
-            print(str(error) + 'in "get_online_users"')
+            print(str(error) + ' in "get_online_users"')
+        else:
+            return self.get_list_rows(self.cursor.fetchall())
 
-    def add_socket(self, row):
-        """ params: tuple(uid, address)"""
-        sql = "INSERT INTO link (uid, address) VALUES (?,?)"
-        try:
-            self.cursor.execute(sql, row)
-        except sqlite3.DatabaseError as error:
-            print(str(error) + 'in "add_socket"')
-        finally:
-            self.connection.commit()
-
-    def get_uid(self, address):
-        """ get uid by address"""
-        sql = "SELECT * FROM link WHERE address = '%s'" % address
+    def get_uid_by_login(self, login):
+        sql = "SELECT * FROM users WHERE login = '%s'" % login
         try:
             self.cursor.execute(sql)
         except sqlite3.DatabaseError as error:
-            print(str(error) + 'in "get_uid"')
+            print(str(error) + ' in "get_uid_by_login"')
         else:
-            return self.cursor.fetchone()['uid']
+            row = self.cursor.fetchone()
+            if row is None:
+                return None
+            else:
+                return row['uid']
 
-    def get_user_by_address(self, address):
-        """ get user by socket address"""
-        uid = self.get_uid(address)
-        return self.get_user(uid)
+    def get_passwd_by_login(self, login):
+        sql = "SELECT * FROM users WHERE login = '%s'" % login
+        try:
+            self.cursor.execute(sql)
+        except sqlite3.DatabaseError as error:
+            print(str(error) + ' in "get_uid_by_login"')
+        else:
+            row = self.cursor.fetchone()
+            if row is None:
+                return None
+            else:
+                return row['password']
 
     @staticmethod
     def dict_factory(cursor, row):

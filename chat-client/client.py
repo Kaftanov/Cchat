@@ -9,7 +9,7 @@
 import select
 import socket
 import sys
-import time
+import datetime
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QThread, QPoint
@@ -69,8 +69,8 @@ class Client:
         else:
             self.server_port = server_port
         # Initial prompt
-        self.user_name = self.validator_authenticate()
-        self.prompt = '[%s $ ' % self.user_name
+        self.user_name = self.connect()
+        self.head = '%s~' % self.user_name
         self.initUI()
 
     def initUI(self):
@@ -97,35 +97,41 @@ class Client:
         """ Send message into socket"""
         # Warning error send message if unbound magic
         data = self.ui.inputLine.text()
-        send_time = time.localtime(time.time())[3:6]
-        time_string = '%s:%s:%s]' % (send_time[0],
-                                     send_time[1],
-                                     send_time[2])
-        self.print_into_box(self.prompt + time_string + data)
+        time = str(datetime.datetime.now().time())[:16]
+        self.print_into_box(self.head + time + ':' + data)
         self.ui.inputLine.clear()
         send(self.sock, data)
 
-    def validator_authenticate(self):
+    def connect(self):
         """ Checking registration/login data"""
         is_authenticate = False
         while not is_authenticate:
             try:
-                data = userform.create_userform()
-                if data:
-                    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    self.sock.connect((self.server_host, self.server_port))
-                    send(self.sock, data)
-                    receive_data = receive(self.sock)
-                    # checking is user available
-                    if receive_data == 'Error':
-                        raise RegisterError(0)
-                    elif receive_data == 'Success':
-                        is_authenticate = True
-                        return data['login']
-                    else:
-                        raise RegisterError(1)
-                else:
+                form = userform.create_userform()
+                if form is None:
                     sys.exit('KeyboardInterrupt from user_form')
+
+                data = {}
+
+                if form[0] == 0:
+                    data = form[1]
+                    data['type'] = 'log'
+                elif form[0] == 1:
+                    data = form[1]
+                    data['type'] = 'reg'
+
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.connect((self.server_host, self.server_port))
+                send(self.sock, data)
+                receive_data = receive(self.sock)
+                if receive_data == 'Error':
+                    raise RegisterError(0)
+                elif receive_data == 'Success':
+                    is_authenticate = True
+                    return data['login']
+                else:
+                    raise RegisterError(1)
+
             except socket.error as error:
                 print('Cchat_Client: Could not connect to chat server')
                 print(error)
@@ -154,9 +160,16 @@ class Client:
                         is_shutdown = False
                         break
                     else:
-                        data_list = data.split('@')
-                        message = '<' + data_list[0] + '>' + data_list[1]
+                        if not data['message']:
+                            continue
+
+                        message = data['head'] + data['message']
+                        print(message)
                         self.print_into_box(message)
+
+    @staticmethod
+    def time():
+        return str(datetime.datetime.now().time())[:16]
 
 
 if __name__ == "__main__":
