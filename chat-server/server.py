@@ -60,7 +60,7 @@ class Server:
         if listen_count is None:
             listen_count = 5
         if serv_host is None:
-            serv_host = 'localhost'
+            serv_host = '172.20.10.14'
         if serv_port is None:
             serv_port = 3490
 
@@ -164,7 +164,6 @@ class Server:
                     try:
                         data = receive(sock)
                         if data:
-                            print(data)
                             if data in self.CmdWorker.command_list:
                                 send(sock, self.CmdWorker.execute_commands(data))
                             else:

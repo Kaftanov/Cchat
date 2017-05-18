@@ -33,7 +33,7 @@ class Commands(object):
         if len(users) > 1:
             message = ''
             for user in users:
-                message += user['login']
+                message += user['login'] + '\n'
 
             return {'head': head, 'message': message}
         else:

@@ -61,11 +61,11 @@ class Client:
     def __init__(self, server_host=None, server_port=None):
         """ init client object """
         if server_host is None:
-            self.server_host = 'localhost'
+            self.server_host = 'hill.cs.msu.ru'
         else:
             self.server_host = server_host
         if server_port is None:
-            self.server_port = 3490
+            self.server_port = 33333
         else:
             self.server_port = server_port
         # Initial prompt
